@@ -1,0 +1,36 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>InkVerse</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Custom Dark Academia Theme -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              cursive: ['"Dancing Script"', 'cursive']
+            },
+            colors: {
+              darkBrown: '#3e2c2c',
+              mutedGreen: '#4a5c3e',
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Dark Academia Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#1a1a1a] text-white font-sans">
+    <div id="root"></div>
+  </body>
+</html>
