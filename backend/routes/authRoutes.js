@@ -1,13 +1,10 @@
-const express = require("express");
-const { signup, login, getProfile } = require("../controllers/authController");
-const router = express.Router();
+const router = require("express").Router();
+const { register, login } = require("../controllers/authController");
 
-router.post("/signup", signup);
+router.post("/register", register);
 router.post("/login", login);
-router.get("/me", getProfile);
 
 module.exports = router;
-
 
 // const express = require("express");
 // const bcrypt = require("bcryptjs");

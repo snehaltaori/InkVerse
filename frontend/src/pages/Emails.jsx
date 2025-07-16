@@ -6,59 +6,105 @@ const Emails = () => {
   const [searchParams] = useSearchParams();
   const [showCompose, setShowCompose] = useState(false);
   const [recipient, setRecipient] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
   const [activeTab, setActiveTab] = useState("inbox");
   const [selectedEmail, setSelectedEmail] = useState(null);
-  const username = "inklover";
+  const [inbox, setInbox] = useState([]);
+  const [sent, setSent] = useState([]);
 
-  const inbox = [
-    {
-      id: 1,
-      from: "elena@inkverse.com",
-      subject: "Loved your last book!",
-      content: "Just wanted to say your work is amazing. Keep writing!",
-      date: "2025-07-12",
-    },
-    {
-      id: 2,
-      from: "admin@inkverse.com",
-      subject: "Welcome to InkVerse",
-      content: "We're thrilled to have you. Start reading or writing today!",
-      date: "2025-07-11",
-    },
-  ];
+  useEffect(() => {
+    const fetchEmails = async () => {
+  try {
+    const [inboxRes, sentRes] = await Promise.all([
+      fetch("/api/emails/inbox", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+        fetch("/api/emails/sent", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+      ]);
 
-  const sent = [
-    {
-      id: 3,
-      to: "elyra@inkverse.com",
-      subject: "Thank you!",
-      content: "Thanks for reading my story — means a lot!",
-      date: "2025-07-12",
-    },
-    {
-      id: 4,
-      to: "admin@inkverse.com",
-      subject: "Feedback",
-      content: "Loving the platform so far. A few suggestions...",
-      date: "2025-07-10",
-    },
-  ];
+      const inboxData = await inboxRes.json();
+      const sentData = await sentRes.json();
+
+      console.log("Inbox response:", inboxData);
+      console.log("Sent response:", sentData);
+
+      // If either is not an array (error), fallback to []
+      setInbox(Array.isArray(inboxData) ? inboxData : []);
+      setSent(Array.isArray(sentData) ? sentData : []);
+      } catch (err) {
+         console.error("Email fetch error:", err);
+      }
+    };
+
+    fetchEmails();
+  }, []);
 
   useEffect(() => {
     const to = searchParams.get("to");
     if (to) {
-      setRecipient(to);
-      setShowCompose(true);
-    }
-  }, [searchParams]);
+        setRecipient(to);
+        setShowCompose(true);
+      }
+    }, [searchParams]);
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    alert("Email sent!");
-    setShowCompose(false);
+    const handleSend = async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch("/api/emails/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ toUsername: recipient, subject, message }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || "Failed to send");
+          return;
+        }
+
+        alert("Email sent!");
+        setShowCompose(false);
+        setSubject("");
+        setMessage("");
+        setRecipient("");
+
+        // Refresh sent box
+        const sentRes = await fetch("/api/emails/sent", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setSent(await sentRes.json());
+      } catch (err) {
+        console.error("Send error:", err);
+        alert("Failed to send email");
+    }
   };
 
-  const handleView = (email) => setSelectedEmail(email);
+  const handleView = async (email) => {
+    try {
+      const res = await fetch(`/api/emails/${email._id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await res.json();
+      setSelectedEmail(data);
+    } catch {
+      alert("Failed to load email");
+    }
+  };
+
   const closeModal = () => setSelectedEmail(null);
 
   return (
@@ -84,20 +130,23 @@ const Emails = () => {
 
       {/* Email List */}
       <div className="space-y-4 mb-24">
-        {(activeTab === "inbox" ? inbox : sent).map((mail) => (
+        {Array.isArray(activeTab === "inbox" ? inbox : sent) &&
+          (activeTab === "inbox" ? inbox : sent).map((mail) => (
           <div
-            key={mail.id}
+            key={mail._id}
             onClick={() => handleView(mail)}
             className="bg-white/5 p-4 rounded-lg shadow hover:bg-white/10 transition cursor-pointer"
           >
             <div className="flex justify-between">
               <h3 className="font-semibold text-lg">{mail.subject}</h3>
-              <span className="text-sm text-mutedGreen">{mail.date}</span>
+              <span className="text-sm text-mutedGreen">
+                {new Date(mail.date).toLocaleDateString()}
+              </span>
             </div>
             <p className="text-sm text-blue-300">
               {activeTab === "inbox" ? `From: ${mail.from}` : `To: ${mail.to}`}
             </p>
-            <p className="text-sm line-clamp-2">{mail.content}</p>
+            <p className="text-sm line-clamp-2">{mail.message}</p>
           </div>
         ))}
       </div>
@@ -116,13 +165,13 @@ const Emails = () => {
               {selectedEmail.subject}
             </h3>
             <p className="text-sm text-mutedGreen mb-2">
-              {activeTab === "inbox"
-                ? `From: ${selectedEmail.from}`
-                : `To: ${selectedEmail.to}`}
+              From: {selectedEmail.from}
+              <br />
+              To: {selectedEmail.to}
             </p>
-            <p className="text-sm">{selectedEmail.content}</p>
+            <p className="text-sm">{selectedEmail.message}</p>
             <p className="text-right mt-4 text-xs text-mutedGreen">
-              {selectedEmail.date}
+              {new Date(selectedEmail.date).toLocaleString()}
             </p>
           </div>
         </div>
@@ -166,6 +215,8 @@ const Emails = () => {
                 <label className="block text-sm mb-1">Subject</label>
                 <input
                   type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
                   className="w-full px-4 py-2 bg-white/20 text-white rounded outline-none"
                   required
                 />
@@ -174,6 +225,8 @@ const Emails = () => {
                 <label className="block text-sm mb-1">Message</label>
                 <textarea
                   rows="4"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   className="w-full px-4 py-2 bg-white/20 text-white rounded outline-none"
                   required
                 ></textarea>
@@ -182,7 +235,7 @@ const Emails = () => {
                 type="submit"
                 className="w-full py-2 bg-mutedGreen rounded hover:bg-green-700 transition"
               >
-                Send from {username}@inkverse.com
+                Send
               </button>
             </form>
           </div>
@@ -193,3 +246,4 @@ const Emails = () => {
 };
 
 export default Emails;
+

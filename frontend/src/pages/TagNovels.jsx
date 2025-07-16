@@ -1,36 +1,32 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 const TagNovels = () => {
   const { tagName } = useParams();
   const [allNovels, setAllNovels] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const novelsPerPage = 15;
 
   useEffect(() => {
-    // Replace with real fetch from backend
-    const dummyNovels = Array.from({ length: 40 }, (_, i) => ({
-      id: i + 1,
-      title: `${tagName} Book ${i + 1}`,
-      author: `Author ${i + 1}`,
-      cover: "https://placehold.co/100x150",
-      description: `A ${tagName} themed novel full of wonder and darkness.`,
-      tags: [tagName.toLowerCase()],
-    }));
+    const fetchNovels = async () => {
+      try {
+        const res = await axios.get(`/api/novels/tags/${tagName}?page=${currentPage}`);
+        setAllNovels(res.data.novels);
+        setTotalPages(Math.ceil(res.data.total / novelsPerPage));
+      } catch (err) {
+        console.error("Failed to fetch novels by tag", err);
+      }
+    };
 
-    setAllNovels(dummyNovels);
-  }, [tagName]);
-
-  const totalPages = Math.ceil(allNovels.length / novelsPerPage);
-  const currentNovels = allNovels.slice(
-    (currentPage - 1) * novelsPerPage,
-    currentPage * novelsPerPage
-  );
+    fetchNovels();
+    window.scrollTo(0, 0);
+  }, [tagName, currentPage]);
 
   const handlePageClick = (pageNum) => {
     setCurrentPage(pageNum);
-    window.scrollTo(0, 0);
   };
 
   return (
@@ -40,13 +36,13 @@ const TagNovels = () => {
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {currentNovels.map((novel) => (
+        {allNovels.map((novel) => (
           <Link
-            key={novel.id}
-            to={`/novel/${novel.id}`}
+            key={novel._id}
+            to={`/novel/${novel._id}`}
             className="flex bg-white/5 p-4 rounded-lg hover:bg-white/10 transition"
           >
-            <img src={novel.cover} alt={novel.title} className="w-24 h-auto mr-4 rounded" />
+            <img src={novel.coverImage} alt={novel.title} className="w-24 h-auto mr-4 rounded" />
             <div>
               <h3 className="text-lg font-bold">{novel.title}</h3>
               <p className="text-sm text-mutedGreen mb-1">{novel.author}</p>

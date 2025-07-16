@@ -1,31 +1,75 @@
 import { useState } from "react";
+import axios from "axios";
+import { useUser } from "../context/UserContext";
 
 const Settings = () => {
-  const [profilePic, setProfilePic] = useState("https://placehold.co/100x100");
-  const [emailToggle, setEmailToggle] = useState(true);
+  const { user, setUser } = useUser();
+  const [profilePic, setProfilePic] = useState(user.profilePic || "https://placehold.co/100x100");
+  const [emailToggle, setEmailToggle] = useState(true); // Optional toggle, not connected to backend yet
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const token = localStorage.getItem("token");
 
   const handleLogout = () => {
-    // TODO: remove token from storage
+    localStorage.removeItem("token");
     alert("Logged out!");
     window.location.href = "/login";
   };
 
-  const handleProfilePicChange = (e) => {
+  const handleProfilePicChange = async (e) => {
     const file = e.target.files[0];
-    // TODO: upload to Cloudinary in real setup
-    if (file) {
-      setProfilePic(URL.createObjectURL(file));
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "your_preset_here"); // 🔁 Replace with your Cloudinary preset
+
+    try {
+      const cloudRes = await axios.post(
+        "https://api.cloudinary.com/v1_1/your_cloud_name/image/upload", // 🔁 Replace with your cloud name
+        formData
+      );
+
+      const imageUrl = cloudRes.data.secure_url;
+      setProfilePic(imageUrl);
+
+      await axios.put(
+        "/api/users/settings/profile-pic",
+        { profilePic: imageUrl },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setUser((prev) => ({ ...prev, profilePic: imageUrl }));
+      alert("Profile picture updated");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update profile picture");
     }
   };
 
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
-    // TODO: send to backend
-    alert("Password changed!");
-    setPassword("");
-    setNewPassword("");
+    try {
+      await axios.put(
+        "/api/users/settings/password",
+        {
+          currentPassword: password,
+          newPassword: newPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      alert("Password changed successfully");
+      setPassword("");
+      setNewPassword("");
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.error || "Failed to update password");
+    }
   };
 
   return (
@@ -39,7 +83,7 @@ const Settings = () => {
           <img
             src={profilePic}
             alt="Profile"
-            className="w-20 h-20 rounded-full shadow"
+            className="w-20 h-20 rounded-full shadow object-cover"
           />
           <input
             type="file"
@@ -79,7 +123,7 @@ const Settings = () => {
         </form>
       </div>
 
-      {/* Email Notifications */}
+      {/* Email Notifications Toggle (Optional) */}
       <div className="bg-white/5 p-6 rounded-xl shadow mb-6">
         <h3 className="text-lg font-semibold mb-2">📧 Email Notifications</h3>
         <label className="flex items-center gap-3">
@@ -92,7 +136,7 @@ const Settings = () => {
         </label>
       </div>
 
-      {/* Logout */}
+      {/* Logout Button */}
       <div className="text-center">
         <button
           onClick={handleLogout}

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import API from "../utils/api";
+import { useUser } from "../context/UserContext"; // make sure this exists
 
 const Signup = () => {
   const [form, setForm] = useState({
@@ -10,21 +12,35 @@ const Signup = () => {
   });
 
   const navigate = useNavigate();
+  const { setUser } = useUser(); // Access setUser from context
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     if (form.password !== form.confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
 
-    // TODO: Send signup request to backend
-    console.log("Registering:", form);
-    navigate("/login"); // Mock redirect
+    try {
+      const res = await API.post("/auth/register", {
+        username: form.username,
+        email: form.email,
+        password: form.password,
+      });
+
+      // Save token and user to localStorage
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      setUser(res.data.user); // Update context
+
+      navigate("/"); // Go to home page
+    } catch (err) {
+      alert(err.response?.data?.error || "Registration failed");
+    }
   };
 
   return (

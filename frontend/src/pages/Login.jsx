@@ -1,17 +1,35 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import API from "../utils/api";
+import { useUser } from "../context/UserContext";
+
 
 const Login = () => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { setUser } = useUser();
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    // TODO: Send login request
-    console.log("Logging in:", emailOrUsername);
-    navigate("/"); // Redirect to home after login (mocked)
-  };
+  
+const handleLogin = async (e) => {
+  e.preventDefault();
+
+  try {
+    const res = await API.post("/auth/login", {
+      usernameOrEmail: emailOrUsername,
+      password,
+    });
+
+    // Store token and user in localStorage
+    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("user", JSON.stringify(res.data.user));
+    setUser(res.data.user); 
+
+    navigate("/"); // Redirect after login
+  } catch (err) {
+    alert(err.response?.data?.error || "Login failed");
+  }
+};
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-[#1a1a1a] pt-24">

@@ -1,68 +1,47 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import axios from "../utils/api";
 
 const Forums = () => {
-  const [threads, setThreads] = useState([
-    {
-      id: 1,
-      title: "Favorite Dark Academia Book?",
-      author: "elena@inkverse.com",
-      content: "I recently finished ‘The Secret History’ and I’m obsessed. Any recommendations?",
-      replies: [
-        {
-          id: 1,
-          author: "marcus@inkverse.com",
-          content: "Try ‘If We Were Villains’ – total vibes!",
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: "Writing Tips for New Authors?",
-      author: "julian@inkverse.com",
-      content: "How do you deal with writer's block?",
-      replies: [],
-    },
-  ]);
-
+  const [threads, setThreads] = useState([]);
   const [newThread, setNewThread] = useState({ title: "", content: "" });
   const [reply, setReply] = useState({});
 
-  const handleThreadPost = (e) => {
-    e.preventDefault();
-    const newId = threads.length + 1;
-    setThreads([
-      ...threads,
-      {
-        id: newId,
-        title: newThread.title,
-        author: "you@inkverse.com",
-        content: newThread.content,
-        replies: [],
-      },
-    ]);
-    setNewThread({ title: "", content: "" });
+  useEffect(() => {
+    fetchThreads();
+  }, []);
+
+  const fetchThreads = async () => {
+    try {
+      const res = await axios.get("/forums");
+      setThreads(res.data);
+    } catch {
+      alert("Failed to load threads");
+    }
   };
 
-  const handleReply = (e, threadId) => {
+  const handleThreadPost = async (e) => {
     e.preventDefault();
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id === threadId
-          ? {
-              ...t,
-              replies: [
-                ...t.replies,
-                {
-                  id: t.replies.length + 1,
-                  author: "you@inkverse.com",
-                  content: reply[threadId],
-                },
-              ],
-            }
-          : t
-      )
-    );
-    setReply({ ...reply, [threadId]: "" });
+    try {
+      await axios.post("/forums", newThread);
+      setNewThread({ title: "", content: "" });
+      fetchThreads();
+    } catch {
+      alert("Failed to post thread");
+    }
+  };
+
+  const handleReply = async (e, threadId) => {
+    e.preventDefault();
+    try {
+      await axios.post(`/forums/${threadId}/reply`, {
+        message: reply[threadId],
+      });
+      setReply({ ...reply, [threadId]: "" });
+      fetchThreads();
+    } catch {
+      alert("Failed to reply");
+    }
   };
 
   return (
@@ -77,14 +56,18 @@ const Forums = () => {
             type="text"
             placeholder="Thread title"
             value={newThread.title}
-            onChange={(e) => setNewThread({ ...newThread, title: e.target.value })}
+            onChange={(e) =>
+              setNewThread({ ...newThread, title: e.target.value })
+            }
             className="w-full px-4 py-2 bg-white/10 text-white rounded outline-none"
             required
           />
           <textarea
             placeholder="Write your thread content here..."
             value={newThread.content}
-            onChange={(e) => setNewThread({ ...newThread, content: e.target.value })}
+            onChange={(e) =>
+              setNewThread({ ...newThread, content: e.target.value })
+            }
             className="w-full px-4 py-2 bg-white/10 text-white rounded outline-none"
             rows="3"
             required
@@ -101,27 +84,44 @@ const Forums = () => {
       {/* Threads List */}
       <div className="space-y-6">
         {threads.map((thread) => (
-          <div key={thread.id} className="bg-white/5 p-5 rounded shadow">
+          <div key={thread._id} className="bg-white/5 p-5 rounded shadow">
             <h4 className="text-lg font-bold">{thread.title}</h4>
-            <p className="text-sm text-mutedGreen mb-1">by {thread.author}</p>
+            <p className="text-sm text-mutedGreen mb-1">
+              by{" "}
+              <Link
+                to={`/user/${thread.author.username}`}
+                className="hover:underline"
+              >
+                {thread.author.username}
+              </Link>
+            </p>
             <p className="mb-3">{thread.content}</p>
 
             {/* Replies */}
             <div className="pl-4 border-l-2 border-mutedGreen/30 space-y-2 mb-4">
               {thread.replies.map((rep) => (
-                <div key={rep.id}>
-                  <p className="text-sm text-mutedGreen">{rep.author}</p>
-                  <p className="text-sm">{rep.content}</p>
+                <div key={rep._id}>
+                  <p className="text-sm text-mutedGreen">
+                    <Link
+                      to={`/user/${rep.author.username}`}
+                      className="hover:underline"
+                    >
+                      {rep.author.username}
+                    </Link>
+                  </p>
+                  <p className="text-sm">{rep.message}</p>
                 </div>
               ))}
             </div>
 
             {/* Reply Box */}
-            <form onSubmit={(e) => handleReply(e, thread.id)} className="space-y-2">
+            <form onSubmit={(e) => handleReply(e, thread._id)} className="space-y-2">
               <textarea
                 rows="2"
-                value={reply[thread.id] || ""}
-                onChange={(e) => setReply({ ...reply, [thread.id]: e.target.value })}
+                value={reply[thread._id] || ""}
+                onChange={(e) =>
+                  setReply({ ...reply, [thread._id]: e.target.value })
+                }
                 placeholder="Write a reply..."
                 className="w-full px-4 py-2 bg-white/10 text-white rounded outline-none"
               ></textarea>

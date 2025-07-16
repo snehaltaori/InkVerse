@@ -4,6 +4,7 @@ import { FaSearch } from "react-icons/fa";
 import { FiLogOut } from "react-icons/fi";
 import { useUser } from "../context/UserContext";
 
+
 const Navbar = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -20,10 +21,12 @@ const Navbar = () => {
   };
 
   const handleLogout = () => {
-    setUser(null); // Clear user from context
-    localStorage.removeItem("token"); // Optional: clear token
-    navigate("/login");
-  };
+  setUser(null);
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  navigate("/login");
+};
+
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -65,7 +68,7 @@ const Navbar = () => {
               onClick={() => setDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-2 focus:outline-none"
             >
-              <img src={user.profilePic || "https://placehold.co/40x40"} alt="profile" className="w-8 h-8 rounded-full" />
+              <img src={user?.profilePic || "/assets/Default_profilepic"} alt="profile" className="w-8 h-8 rounded-full" />
               <span className="text-sm">{user.username}</span>
             </button>
 

@@ -1,70 +1,93 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "../context/UserContext";
 import { FaEnvelope } from "react-icons/fa";
+import axios from "axios";
+
 
 const Profile = () => {
-  const { user } = useUser();
-
+  const { user: authUser } = useUser();
+  const [profile, setProfile] = useState(null); // holds the full profile data
   const [showList, setShowList] = useState(null); // 'followers' or 'following' or null
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const followers = [
-    {
-      id: 1,
-      username: "bookworm23",
-      profilePic: "https://placehold.co/60x60",
-      isFollowing: true,
-    },
-    {
-      id: 2,
-      username: "elena_inks",
-      profilePic: "https://placehold.co/60x60",
-      isFollowing: false,
-    },
-  ];
+  const fetchProfile = async () => {
+    try {
+      const res = await axios.get("/api/users/me", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setProfile(res.data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Failed to fetch profile", err);
+      setLoading(false);
+    }
+  };
 
-  const following = [
-    {
-      id: 3,
-      username: "mystic_writer",
-      profilePic: "https://placehold.co/60x60",
-      isFollowing: true,
-    },
-  ];
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
-  const handleFollowToggle = (username) => {
-    // TODO: integrate backend follow/unfollow logic
-    alert(`Toggled follow for ${username}`);
+  const handleFollowToggle = async (username, isFollowing) => {
+    try {
+      if (isFollowing) {
+        await axios.post(`/api/users/${username}/unfollow`, {}, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+      } else {
+        await axios.post(`/api/users/${username}/follow`, {}, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+      }
+      // Refetch updated profile after change
+      fetchProfile();
+    } catch (err) {
+      console.error("Error toggling follow", err);
+    }
   };
 
   const handleEmail = (username) => {
     window.location.href = `/emails?to=${username}`;
   };
 
+  if (loading) {
+    return <div className="pt-28 px-6 text-white">Loading profile...</div>;
+  }
+
+  if (!profile) {
+    return <div className="pt-28 px-6 text-white">Profile not found.</div>;
+  }
+
   return (
     <div className="pt-28 px-6 min-h-screen text-white relative">
       {/* Profile Header */}
       <div className="bg-white/5 p-6 rounded-xl shadow-md flex items-center gap-6 mb-8">
         <img
-          src={user.profilePic}
+          src={profile.profilePic || "/newpero/frontend/public/assets/Default_profilepic.jpg"}
           alt="Profile"
           className="w-24 h-24 rounded-full object-cover shadow"
         />
+
         <div>
-          <h2 className="text-2xl font-bold">{user.username}</h2>
+          <h2 className="text-2xl font-bold">{profile.username}</h2>
           <p className="text-sm text-mutedGreen mt-1">
             <span
               onClick={() => setShowList("followers")}
               className="cursor-pointer hover:underline"
             >
-              {user.followers} Followers
+              {profile.followers.length} Followers
             </span>{" "}
             ·{" "}
             <span
               onClick={() => setShowList("following")}
               className="cursor-pointer hover:underline"
             >
-              {user.following} Following
+              {profile.following.length} Following
             </span>
           </p>
         </div>
@@ -74,19 +97,18 @@ const Profile = () => {
       <div className="bg-white/5 p-6 rounded-xl shadow-md">
         <h3 className="text-xl font-semibold mb-4">📚 My Library</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {user.library.map((book) => (
+          {profile.library.map((book) => (
             <div
-              key={book.id}
+              key={book._id}
               className="flex bg-white/10 rounded-lg overflow-hidden"
             >
               <img
-                src={book.cover}
+                src={book.coverImage}
                 alt={book.title}
                 className="w-20 h-auto object-cover"
               />
               <div className="p-3">
                 <h4 className="font-semibold">{book.title}</h4>
-                <p className="text-sm text-mutedGreen">{book.author}</p>
               </div>
             </div>
           ))}
@@ -107,10 +129,10 @@ const Profile = () => {
               ✖ Close
             </button>
             <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-              {(showList === "followers" ? followers : following).map(
+              {(showList === "followers" ? profile.followers : profile.following).map(
                 (person) => (
                   <div
-                    key={person.id}
+                    key={person._id}
                     className="flex items-center justify-between bg-white/10 p-3 rounded"
                   >
                     <div className="flex items-center gap-3">
@@ -123,10 +145,19 @@ const Profile = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => handleFollowToggle(person.username)}
+                        onClick={() =>
+                          handleFollowToggle(
+                            person.username,
+                            profile.following.some(
+                              (f) => f._id === person._id
+                            )
+                          )
+                        }
                         className="px-3 py-1 text-sm bg-mutedGreen rounded hover:bg-green-700"
                       >
-                        {person.isFollowing ? "Unfollow" : "Follow"}
+                        {profile.following.some((f) => f._id === person._id)
+                          ? "Unfollow"
+                          : "Follow"}
                       </button>
                       <button
                         onClick={() => handleEmail(person.username)}
