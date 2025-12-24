@@ -1,16 +1,16 @@
 const router = require("express").Router();
 const auth = require("../middleware/auth");
 const {
-  addToLibrary,
-  getLibrary,
-  removeFromLibrary,
-  getMyProfile,
-  getUserByUsername,
-  followUser,
-  unfollowUser,
-  getFollowStates,
-  updateProfilePic,
-  changePassword
+    addToLibrary,
+    getLibrary,
+    removeFromLibrary,
+    getMyProfile,
+    getUserByUsername,
+    followUser,
+    unfollowUser,
+    getFollowStates,
+    updateProfilePic,
+    changePassword
 } = require("../controllers/userController");
 
 router.post("/library/:novelId", auth, addToLibrary);         // Add to library

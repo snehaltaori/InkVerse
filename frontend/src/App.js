@@ -17,56 +17,54 @@ import ReadPage from "./pages/ReadPage";
 import UserProfile from "./pages/UserProfile";
 
 const App = () => {
-  const { user, setUser } = useUser();
+    const { user, setUser } = useUser();
 
-  // Fetch user from token on app load
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      fetch("http://localhost:5000/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setUser(data.user);
-          } else {
-            setUser(null);
-          }
-        })
-        .catch(() => setUser(null));
-    }
-  }, [setUser]);
+    // Fetch user from token on app load
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            fetch("http://localhost:5000/api/auth/me", {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.success) {
+                        setUser(data.user);
+                    } else {
+                        setUser(null);
+                    }
+                })
+                .catch(() => setUser(null));
+        }
+    }, [setUser]);
 
-  // Wrapper to protect routes
-  const PrivateRoute = ({ element }) => {
-    return user ? element : <Navigate to="/login" />;
-  };
+    // Wrapper to protect routes
+    const PrivateRoute = ({ element }) => {
+        return user ? element : <Navigate to="/login" />;
+    };
 
-  return (
-    <>
-      <Navbar />
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Homep />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/novel/:id" element={<NovelDetails />} />
-        <Route path="/tags/:tagName" element={<TagNovels />} />
-        <Route path="/search" element={<SearchResults />} />
-        <Route path="/read/:id/:chapterId" element={<ReadPage />} />
-        <Route path="/user/:username" element={<UserProfile />} />
+    return (
+        <>
+            <Navbar />
+            <Routes>
+                <Route path="/" element={<Homep />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/tags/:tagName" element={<TagNovels />} />
+                <Route path="/search" element={<SearchResults />} />
+                <Route path="/read/:chapterId" element={<ReadPage />} />
+                <Route path="/novel/:id" element={<NovelDetails />} />
 
-        {/* Protected Routes */}
-        <Route path="/profile" element={<PrivateRoute element={<Profile />} />} />
-        <Route path="/emails" element={<PrivateRoute element={<Emails />} />} />
-        <Route path="/forums" element={<PrivateRoute element={<Forums />} />} />
-        <Route path="/settings" element={<PrivateRoute element={<Settings />} />} />
-      </Routes>
-    </>
-  );
+
+                <Route path="/profile" element={<PrivateRoute element={<Profile />} />} />
+                <Route path="/emails" element={<PrivateRoute element={<Emails />} />} />
+                <Route path="/forums" element={<PrivateRoute element={<Forums />} />} />
+                <Route path="/settings" element={<PrivateRoute element={<Settings />} />} />
+            </Routes>
+        </>
+    );
 };
 
 export default App;

@@ -1,10 +1,10 @@
 const router = require("express").Router();
 const auth = require("../middleware/auth");
 const {
-  sendEmail,
-  getReceivedEmails,
-  getSentEmails,
-  getEmailById
+    sendEmail,
+    getReceivedEmails,
+    getSentEmails,
+    getEmailById
 } = require("../controllers/emailController");
 
 router.post("/send", auth, sendEmail);

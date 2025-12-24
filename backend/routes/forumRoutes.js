@@ -1,10 +1,10 @@
 const router = require("express").Router();
 const auth = require("../middleware/auth");
 const {
-  getAllThreads,
-  createThread,
-  getThreadById,
-  addReply
+    getAllThreads,
+    createThread,
+    getThreadById,
+    addReply
 } = require("../controllers/forumController");
 
 router.get("/", getAllThreads);                 // Public: View all threads

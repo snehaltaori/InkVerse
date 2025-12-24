@@ -1,76 +1,127 @@
-import { useParams } from "react-router-dom";
+﻿import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import axios from "axios";
 
 const TagNovels = () => {
-  const { tagName } = useParams();
-  const [allNovels, setAllNovels] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const novelsPerPage = 15;
+    const { tagName } = useParams();
 
-  useEffect(() => {
-    const fetchNovels = async () => {
-      try {
-        const res = await axios.get(`/api/novels/tags/${tagName}?page=${currentPage}`);
-        setAllNovels(res.data.novels);
-        setTotalPages(Math.ceil(res.data.total / novelsPerPage));
-      } catch (err) {
-        console.error("Failed to fetch novels by tag", err);
-      }
-    };
+    const [novels, setNovels] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [loading, setLoading] = useState(false);
 
-    fetchNovels();
-    window.scrollTo(0, 0);
-  }, [tagName, currentPage]);
+    const novelsPerPage = 15;
 
-  const handlePageClick = (pageNum) => {
-    setCurrentPage(pageNum);
-  };
+    useEffect(() => {
+        const fetchNovels = async () => {
+            setLoading(true);
+            try {
+                const res = await axios.get(
+                    `/api/novels/tags/${tagName}?page=${currentPage}`
+                );
 
-  return (
-    <div className="pt-24 px-6 min-h-screen text-white">
-      <h2 className="text-2xl font-bold mb-6">
-        Results for tag: <span className="text-mutedGreen capitalize">{tagName}</span>
-      </h2>
+                const fetchedNovels = Array.isArray(res.data.novels)
+                    ? res.data.novels
+                    : [];
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {allNovels.map((novel) => (
-          <Link
-            key={novel._id}
-            to={`/novel/${novel._id}`}
-            className="flex bg-white/5 p-4 rounded-lg hover:bg-white/10 transition"
-          >
-            <img src={novel.coverImage} alt={novel.title} className="w-24 h-auto mr-4 rounded" />
-            <div>
-              <h3 className="text-lg font-bold">{novel.title}</h3>
-              <p className="text-sm text-mutedGreen mb-1">{novel.author}</p>
-              <p className="text-sm line-clamp-3">{novel.description}</p>
-              <button className="text-sm text-blue-400 mt-1">See more</button>
+                setNovels(fetchedNovels);
+                setTotalPages(Math.ceil(res.data.total / novelsPerPage));
+            } catch (err) {
+                console.error("Failed to fetch novels by tag", err);
+                setNovels([]);
+                setTotalPages(1);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchNovels();
+        window.scrollTo(0, 0);
+    }, [tagName, currentPage]);
+
+    return (
+        <div className="pt-24 px-6 min-h-screen text-white">
+            <h2 className="text-2xl font-bold mb-6">
+                Results for tag:{" "}
+                <span className="text-mutedGreen capitalize">{tagName}</span>
+            </h2>
+
+            {loading && (
+                <p className="text-mutedGreen mb-6">Loading novels...</p>
+            )}
+
+            {!loading && novels.length === 0 && (
+                <p className="text-mutedGreen mb-6">
+                    No novels found for this tag.
+                </p>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                {novels.map((novel) => (
+                    <Link
+                        key={novel._id}
+                        to={`/novel/${novel._id}`}
+                        className="flex bg-white/5 p-4 rounded-lg hover:bg-white/10 transition"
+                    >
+                        <img
+                            src={novel.cover}
+                            alt={novel.title}
+                            className="w-24 h-32 object-cover mr-4 rounded"
+                        />
+
+                        <div className="flex flex-col">
+                            <h3 className="text-lg font-bold">{novel.title}</h3>
+
+                            <p className="text-sm text-mutedGreen mb-1">
+                                by {novel.author}
+                            </p>
+
+                            <p className="text-sm line-clamp-3">
+                                {novel.description}
+                            </p>
+
+                            {novel.tags?.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {novel.tags.slice(0, 3).map((tag) => (
+                                        <span
+                                            key={tag}
+                                            className="text-xs bg-white/10 px-2 py-0.5 rounded"
+                                        >
+                                            #{tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            <span className="text-sm text-blue-400 mt-auto">
+                                See more →
+                            </span>
+                        </div>
+                    </Link>
+                ))}
             </div>
-          </Link>
-        ))}
-      </div>
 
-      {/* Pagination */}
-      <div className="flex justify-center gap-3 mb-12">
-        {Array.from({ length: totalPages }, (_, idx) => (
-          <button
-            key={idx + 1}
-            onClick={() => handlePageClick(idx + 1)}
-            className={`px-3 py-1 rounded ${
-              currentPage === idx + 1
-                ? "bg-mutedGreen text-white"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            {idx + 1}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex justify-center gap-3 mb-12">
+                    {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(
+                        (page) => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-3 py-1 rounded ${currentPage === page
+                                        ? "bg-mutedGreen text-white"
+                                        : "bg-white/10 hover:bg-white/20"
+                                    }`}
+                            >
+                                {page}
+                            </button>
+                        )
+                    )}
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default TagNovels;
