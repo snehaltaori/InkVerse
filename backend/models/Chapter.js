@@ -17,7 +17,7 @@ const ChapterSchema = new mongoose.Schema(
 
         content: {
             type: String,
-            required: true,
+            default: "",
         },
 
         chapterNumber: {
@@ -28,8 +28,8 @@ const ChapterSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: ["published"],
-            default: "published",
+            enum: ["draft", "published"],
+            default: "draft",
         },
     },
     { timestamps: true }

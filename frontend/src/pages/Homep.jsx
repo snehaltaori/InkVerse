@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import API from "../utils/api";
+import BookCover from "../components/BookCover";
 
 const genres = [
     "Romance", "Fantasy", "Mystery", "Drama", "Horror",
@@ -17,9 +18,8 @@ const Homep = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(true);
 
-    const LIMIT = 15; // MUST match backend
+    const LIMIT = 15;
 
-    /* ---------------- Fetch novels ---------------- */
     useEffect(() => {
         const fetchNovels = async () => {
             setLoading(true);
@@ -37,7 +37,6 @@ const Homep = () => {
         fetchNovels();
     }, [currentPage]);
 
-    /* ---------------- Sidebar data ---------------- */
     useEffect(() => {
         const fetchSidebar = async () => {
             try {
@@ -63,6 +62,7 @@ const Homep = () => {
 
     return (
         <div className="pt-24 px-6 text-white">
+
             {/* Genres */}
             <div className="flex flex-wrap gap-4 justify-center mb-6">
                 {genres.map((tag) => (
@@ -93,31 +93,34 @@ const Homep = () => {
             {loading ? (
                 <p className="text-center text-gray-400">Loading novels...</p>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                     {novels.map((novel) => (
                         <Link
                             key={novel._id}
                             to={`/novel/${novel._id}`}
-                            className="flex bg-white/5 p-4 rounded-lg hover:bg-white/10"
+                            className="flex gap-4 bg-white/5 p-4 rounded-lg hover:bg-white/10 transition"
                         >
-                            <img
-                                src={novel.coverImage || "/placeholder.jpg"}
-                                alt={novel.title}
-                                className="w-24 mr-4 rounded"
+                            <BookCover
+                                title={novel.title}
+                                coverTitle={novel.coverTitle}
+                                coverImage={novel.coverImage}
+                                size="md"
                             />
 
                             <div>
-                                <h3 className="text-lg font-bold">{novel.title}</h3>
+                                <h3 className="text-lg font-serif font-semibold">
+                                    {novel.title}
+                                </h3>
 
                                 <p className="text-sm text-mutedGreen mb-1">
                                     {novel.author?.username || "Unknown Author"}
                                 </p>
 
-                                <p className="text-sm line-clamp-3">
+                                <p className="text-sm line-clamp-3 opacity-80">
                                     {novel.description}
                                 </p>
 
-                                <span className="text-sm text-blue-400 mt-1 inline-block">
+                                <span className="text-sm text-green-400 mt-1 inline-block">
                                     See more
                                 </span>
                             </div>
@@ -145,32 +148,61 @@ const Homep = () => {
             )}
 
             {/* Popular & New */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+
+                {/* Popular */}
                 <div className="bg-white/5 p-4 rounded-lg">
-                    <h4 className="text-xl font-semibold mb-3">🔥 Popular Searches</h4>
-                    {popular.map((book) => (
-                        <Link
-                            key={book._id}
-                            to={`/novel/${book._id}`}
-                            className="block text-sm text-blue-300 hover:underline mb-1"
-                        >
-                            {book.title}
-                        </Link>
-                    ))}
+                    <h4 className="text-xl font-semibold mb-4">
+                        Popular Searches
+                    </h4>
+
+                    <ul className="space-y-2">
+                        {popular.map((book) => (
+                            <li key={book._id}>
+                                <Link
+                                    to={`/novel/${book._id}`}
+                                    className="
+                                        text-mutedGreen
+                                        hover:text-green-400
+                                        hover:underline
+                                        transition
+                                        font-medium
+                                    "
+                                >
+                                    {book.title}
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
 
+
+                {/* New */}
                 <div className="bg-white/5 p-4 rounded-lg">
-                    <h4 className="text-xl font-semibold mb-3">🆕 Newly Added</h4>
-                    {newBooks.map((book) => (
-                        <Link
-                            key={book._id}
-                            to={`/novel/${book._id}`}
-                            className="block text-sm text-blue-300 hover:underline mb-1"
-                        >
-                            {book.title}
-                        </Link>
-                    ))}
+                    <h4 className="text-xl font-semibold mb-4">
+                        Newly Added
+                    </h4>
+
+                    <ul className="space-y-2">
+                        {newBooks.map((book) => (
+                            <li key={book._id}>
+                                <Link
+                                    to={`/novel/${book._id}`}
+                                    className="
+                                        text-mutedGreen
+                                        hover:text-green-400
+                                        hover:underline
+                                        transition
+                                        font-medium
+                                    "
+                                >
+                                    {book.title}
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
+
             </div>
 
             {/* Footer */}
@@ -182,3 +214,4 @@ const Homep = () => {
 };
 
 export default Homep;
+

@@ -1,6 +1,7 @@
 ﻿import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import BookCover from "../components/BookCover";
 
 const TagNovels = () => {
     const { tagName } = useParams();
@@ -20,12 +21,10 @@ const TagNovels = () => {
                     `/api/novels/tags/${tagName}?page=${currentPage}`
                 );
 
-                const fetchedNovels = Array.isArray(res.data.novels)
-                    ? res.data.novels
-                    : [];
-
-                setNovels(fetchedNovels);
-                setTotalPages(Math.ceil(res.data.total / novelsPerPage));
+                setNovels(res.data.novels || []);
+                setTotalPages(
+                    Math.ceil((res.data.total || 0) / novelsPerPage)
+                );
             } catch (err) {
                 console.error("Failed to fetch novels by tag", err);
                 setNovels([]);
@@ -63,17 +62,20 @@ const TagNovels = () => {
                         to={`/novel/${novel._id}`}
                         className="flex bg-white/5 p-4 rounded-lg hover:bg-white/10 transition"
                     >
-                        <img
-                            src={novel.cover}
-                            alt={novel.title}
-                            className="w-24 h-32 object-cover mr-4 rounded"
+                        {/* ✅ CORRECT COVER SYSTEM */}
+                        <BookCover
+                            title={novel.coverTitle || novel.title}
+                            image={novel.coverImage}
+                            size="small"
                         />
 
-                        <div className="flex flex-col">
-                            <h3 className="text-lg font-bold">{novel.title}</h3>
+                        <div className="flex flex-col ml-4">
+                            <h3 className="text-lg font-bold">
+                                {novel.title}
+                            </h3>
 
-                            <p className="text-sm text-mutedGreen mb-1">
-                                by {novel.author}
+                            <p className="text-mutedGreen text-sm mb-1">
+                                by {novel.author?.username || "Unknown"}
                             </p>
 
                             <p className="text-sm line-clamp-3">
@@ -104,7 +106,7 @@ const TagNovels = () => {
             {/* Pagination */}
             {totalPages > 1 && (
                 <div className="flex justify-center gap-3 mb-12">
-                    {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                         (page) => (
                             <button
                                 key={page}
@@ -125,3 +127,4 @@ const TagNovels = () => {
 };
 
 export default TagNovels;
+

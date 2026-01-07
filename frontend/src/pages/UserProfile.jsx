@@ -11,7 +11,7 @@ const UserProfile = () => {
     const token = localStorage.getItem("token");
 
     const [profile, setProfile] = useState(null);
-    const [showList, setShowList] = useState(null); // followers | following
+    const [showList, setShowList] = useState(null); 
     const [loading, setLoading] = useState(true);
     const [followLoading, setFollowLoading] = useState(false);
 

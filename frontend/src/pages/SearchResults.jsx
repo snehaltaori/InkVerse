@@ -71,7 +71,8 @@ const SearchResults = () => {
                             <h3 className="text-lg font-bold">{novel.title}</h3>
 
                             <p className="text-sm text-mutedGreen mb-1">
-                                by {novel.author}
+                                by {novel.author?.username}
+
                             </p>
 
                             <p className="text-sm line-clamp-3">

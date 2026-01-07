@@ -1,33 +1,25 @@
-const Novel = require("../models/Novel");
+﻿const Novel = require("../models/Novel");
+const Chapter = require("../models/Chapter");
 
-
-/* ============================================
-   Get all novels (paginated)
-   GET /api/novels?page=1
-============================================ */
 const getAllNovels = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 15;
     const skip = (page - 1) * limit;
 
     try {
-        const novels = await Novel.find()
+        const novels = await Novel.find({ status: "published" })
             .populate("author", "username")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
-        const total = await Novel.countDocuments();
+        const total = await Novel.countDocuments({ status: "published" });
         res.json({ novels, total });
-    } catch (err) {
+    } catch {
         res.status(500).json({ error: "Server error" });
     }
 };
 
-/* ============================================
-   Search novels
-   GET /api/novels/search?q=romance&page=1
-============================================ */
 const searchNovels = async (req, res) => {
     const query = req.query.q;
     const page = parseInt(req.query.page) || 1;
@@ -38,32 +30,24 @@ const searchNovels = async (req, res) => {
         const regex = new RegExp(query, "i");
 
         const novels = await Novel.find({
+            status: "published",
             $or: [{ title: regex }, { tags: regex }],
         })
             .populate("author", "username")
             .skip(skip)
             .limit(limit);
 
-        await Novel.updateMany(
-            { $or: [{ title: regex }, { tags: regex }] },
-            { $inc: { searchCount: 1 } }
-        );
-
         res.json({ novels });
-    } catch (err) {
+    } catch {
         res.status(500).json({ error: "Search failed" });
     }
 };
 
-/* ============================================
-   Popular novels
-   GET /api/novels/popular
-============================================ */
 const getPopularNovels = async (req, res) => {
     try {
-        const novels = await Novel.find()
+        const novels = await Novel.find({ status: "published" })
             .populate("author", "username")
-            .sort({ searchCount: -1, viewCount: -1 })
+            .sort({ viewCount: -1 })
             .limit(6);
 
         res.json(novels);
@@ -72,13 +56,9 @@ const getPopularNovels = async (req, res) => {
     }
 };
 
-/* ============================================
-   Newly added novels
-   GET /api/novels/new
-============================================ */
 const getNewlyAddedNovels = async (req, res) => {
     try {
-        const novels = await Novel.find()
+        const novels = await Novel.find({ status: "published" })
             .populate("author", "username")
             .sort({ createdAt: -1 })
             .limit(6);
@@ -89,14 +69,10 @@ const getNewlyAddedNovels = async (req, res) => {
     }
 };
 
-/* ============================================
-   Novel details (NO chapters here)
-   GET /api/novels/:id
-============================================ */
 const getNovelById = async (req, res) => {
     try {
         const novel = await Novel.findById(req.params.id)
-            .populate("author", "username");
+            .populate("author", "username profilePic");
 
         if (!novel) {
             return res.status(404).json({ error: "Novel not found" });
@@ -108,22 +84,27 @@ const getNovelById = async (req, res) => {
         res.json({
             _id: novel._id,
             title: novel.title,
+            coverTitle: novel.coverTitle,
             description: novel.description,
-            author: novel.author.username,
+
+            author: {
+                _id: novel.author._id,
+                username: novel.author.username,
+                profilePic: novel.author.profilePic,
+            },
+
             tags: novel.tags,
             coverImage: novel.coverImage,
             viewCount: novel.viewCount,
             createdAt: novel.createdAt,
         });
-    } catch {
+    } catch (err) {
+        console.error("GET NOVEL ERROR:", err);
         res.status(500).json({ error: "Server error" });
     }
 };
 
-/* ============================================
-   Novels by tag
-   GET /api/novels/tags/:tag?page=1
-============================================ */
+
 const getNovelsByTag = async (req, res) => {
     const { tag } = req.params;
     const page = parseInt(req.query.page) || 1;
@@ -132,6 +113,7 @@ const getNovelsByTag = async (req, res) => {
 
     try {
         const novels = await Novel.find({
+            status: "published",
             tags: { $regex: new RegExp(tag, "i") },
         })
             .populate("author", "username")
@@ -139,12 +121,143 @@ const getNovelsByTag = async (req, res) => {
             .limit(limit);
 
         const total = await Novel.countDocuments({
+            status: "published",
             tags: { $regex: new RegExp(tag, "i") },
         });
 
         res.json({ novels, total });
     } catch {
         res.status(500).json({ error: "Failed to fetch novels by tag" });
+    }
+};
+
+const createNovel = async (req, res) => {
+    try {
+        const { title, coverTitle = "" } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ error: "Title is required" });
+        }
+
+        const novel = await Novel.create({
+            title,
+            coverTitle,             
+            author: req.user.id,
+            description: "",
+            tags: [],
+            coverImage: "",
+            status: "draft",
+        });
+
+        res.status(201).json(novel);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to create novel" });
+    }
+};
+
+const getMyNovels = async (req, res) => {
+    try {
+        const novels = await Novel.find({ author: req.user.id })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const novelIds = novels.map(n => n._id);
+
+        const chapterCounts = await Chapter.aggregate([
+            { $match: { novel: { $in: novelIds } } },
+            { $group: { _id: "$novel", count: { $sum: 1 } } }
+        ]);
+
+        const countMap = {};
+        chapterCounts.forEach(c => {
+            countMap[c._id.toString()] = c.count;
+        });
+
+        const result = novels.map(novel => ({
+            ...novel,
+            chapterCount: countMap[novel._id.toString()] || 0,
+        }));
+
+        res.json(result);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to load novels" });
+    }
+};
+
+const publishNovel = async (req, res) => {
+    try {
+        const novel = await Novel.findById(req.params.novelId);
+
+        if (!novel) return res.status(404).json({ error: "Novel not found" });
+        if (novel.author.toString() !== req.user.id) {
+            return res.status(403).json({ error: "Not authorized" });
+        }
+
+        novel.status = "published";
+        await novel.save();
+
+        await Chapter.updateMany(
+            { novel: novel._id },
+            { status: "published" }
+        );
+
+        res.json({ message: "Novel published successfully" });
+    } catch (err) {
+        console.error("PUBLISH NOVEL ERROR:", err);
+        res.status(500).json({ error: "Failed to publish novel" });
+    }
+};
+
+const deleteNovel = async (req, res) => {
+    try {
+        const novel = await Novel.findById(req.params.novelId);
+
+        if (!novel) return res.status(404).json({ error: "Novel not found" });
+        if (novel.author.toString() !== req.user.id) {
+            return res.status(403).json({ error: "Not authorized" });
+        }
+
+        await Chapter.deleteMany({ novel: novel._id });
+        await novel.deleteOne();
+
+        res.json({ message: "Novel deleted" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to delete novel" });
+    }
+};
+const updateNovel = async (req, res) => {
+    try {
+        const { title, coverTitle, description, tags, coverImage } = req.body;
+
+        const novel = await Novel.findById(req.params.novelId);
+
+        if (!novel) {
+            return res.status(404).json({ error: "Novel not found" });
+        }
+
+        if (novel.author.toString() !== req.user.id) {
+            return res.status(403).json({ error: "Not authorized" });
+        }
+
+        if (novel.status === "published") {
+            return res.status(400).json({ error: "Published novels cannot be edited" });
+        }
+
+        novel.title = title;
+        novel.coverTitle = coverTitle || "";
+        novel.description = description || "";
+        novel.tags = tags || [];
+        novel.coverImage = coverImage || "";
+
+        await novel.save();
+
+        res.json(novel);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update novel" });
     }
 };
 
@@ -155,5 +268,12 @@ module.exports = {
     getNewlyAddedNovels,
     getNovelById,
     getNovelsByTag,
+    createNovel,
+    getMyNovels,
+    publishNovel,
+    deleteNovel,
+    updateNovel,
 };
+
+
 

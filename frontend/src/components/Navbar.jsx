@@ -100,6 +100,13 @@ const Navbar = () => {
                                     >
                                         Profile
                                     </Link>
+                                    <Link
+                                        to="/studio"
+                                        onClick={() => setDropdownOpen(false)}
+                                        className="block px-3 py-1 hover:bg-white/10"
+                                    >
+                                        Studio
+                                    </Link>
 
 
                                 <Link

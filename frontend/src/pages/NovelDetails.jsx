@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import API from "../utils/api";
 import { useUser } from "../context/UserContext";
+import BookCover from "../components/BookCover";
 
 const NovelDetails = () => {
     const { id } = useParams();
@@ -11,24 +12,33 @@ const NovelDetails = () => {
     const [novel, setNovel] = useState(null);
     const [chapters, setChapters] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [added, setAdded] = useState(false);
 
-    // Add to library
+    const isInLibrary =
+        !!user &&
+        !!novel &&
+        user.library?.some(
+            (b) => b === novel._id || b?._id === novel._id
+        );
+
+    useEffect(() => {
+        if (isInLibrary) setAdded(true);
+    }, [isInLibrary]);
+
     const handleAddToLibrary = async () => {
-        if (!user) {
-            navigate("/login");
-            return;
-        }
+        if (!user || added || isInLibrary) return;
 
         try {
             await API.post(`/users/library/${id}`);
             addToLibrary(novel);
-            alert("Added to your library!");
+            setAdded(true);
         } catch (err) {
-            alert(err.response?.data?.message || "Failed to add to library");
+            if (err.response?.status !== 400) {
+                alert("Failed to add to library");
+            }
         }
     };
 
-    // Read Now
     const handleReadNow = async () => {
         try {
             const res = await API.get(`/chapters/${id}/first`);
@@ -38,7 +48,6 @@ const NovelDetails = () => {
         }
     };
 
-    // Fetch novel + chapters
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -49,7 +58,11 @@ const NovelDetails = () => {
                 ]);
 
                 setNovel(novelRes.data);
-                setChapters(Array.isArray(chaptersRes.data) ? chaptersRes.data : []);
+                setChapters(
+                    Array.isArray(chaptersRes.data)
+                        ? chaptersRes.data
+                        : []
+                );
             } catch {
                 setNovel(null);
                 setChapters([]);
@@ -81,18 +94,41 @@ const NovelDetails = () => {
         <div className="pt-28 px-6 min-h-screen text-white">
             {/* Header */}
             <div className="flex flex-col md:flex-row gap-6 bg-white/5 p-6 rounded-xl mb-8">
-                <img
-                    src={novel.coverImage || "https://placehold.co/120x180"}
-                    alt={novel.title}
-                    className="w-[120px] rounded shadow"
+
+                {/* COVER */}
+                <BookCover
+                    title={novel.title}
+                    coverTitle={novel.coverTitle}
+                    coverImage={novel.coverImage}
+                    size="lg"
                 />
 
+                {/* INFO */}
                 <div>
                     <h1 className="text-3xl font-bold">{novel.title}</h1>
 
-                    <p className="text-mutedGreen mb-2">
-                        by {novel.author}
-                    </p>
+                    {added && (
+                        <span className="inline-block mt-2 px-3 py-1 text-xs rounded-full bg-mutedGreen/30 text-mutedGreen">
+                            ✔ Added to your library
+                        </span>
+                    )}
+
+                    {/* 🔹 CLICKABLE AUTHOR */}
+                    {novel.author?._id ? (
+                        <p className="text-mutedGreen mb-2">
+                            by{" "}
+                            <Link
+                                to={`/profile/${novel.author._id}`}
+                                className="hover:underline text-blue-300"
+                            >
+                                {novel.author.username}
+                            </Link>
+                        </p>
+                    ) : (
+                        <p className="text-mutedGreen mb-2">
+                            by {novel.author}
+                        </p>
+                    )}
 
                     <p className="mb-4 text-sm">{novel.description}</p>
 
@@ -111,18 +147,27 @@ const NovelDetails = () => {
                         {chapters.length > 0 && (
                             <button
                                 onClick={handleReadNow}
-                                className="bg-mutedGreen px-4 py-2 rounded hover:bg-green-700"
+                                className="bg-mutedGreen px-4 py-2 rounded hover:bg-green-700 transition"
                             >
                                 📖 Read Now
                             </button>
                         )}
 
-                        <button
-                            onClick={handleAddToLibrary}
-                            className="bg-white/10 px-4 py-2 rounded hover:bg-white/20"
-                        >
-                            ➕ Add to Library
-                        </button>
+                        {!added ? (
+                            <button
+                                onClick={handleAddToLibrary}
+                                className="bg-white/10 px-4 py-2 rounded hover:bg-white/20 transition"
+                            >
+                                ➕ Add to Library
+                            </button>
+                        ) : (
+                            <button
+                                disabled
+                                className="bg-mutedGreen/30 text-mutedGreen px-4 py-2 rounded cursor-default font-medium"
+                            >
+                                ✔ Added to Library
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

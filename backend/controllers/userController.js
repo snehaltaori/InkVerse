@@ -1,4 +1,4 @@
-const User = require("../models/User");
+﻿const User = require("../models/User");
 const Novel = require("../models/Novel");
 
 exports.addToLibrary = async (req, res) => {
@@ -9,21 +9,29 @@ exports.addToLibrary = async (req, res) => {
         const user = await User.findById(userId);
         const novel = await Novel.findById(novelId);
 
-        if (!novel) return res.status(404).json({ error: "Novel not found" });
+        if (!novel) {
+            return res.status(404).json({ error: "Novel not found" });
+        }
 
-        const alreadyInLibrary = user.library.includes(novelId);
+        // ✅ FIX: Proper ObjectId comparison
+        const alreadyInLibrary = user.library.some(
+            id => id.toString() === novelId
+        );
+
         if (alreadyInLibrary) {
             return res.status(400).json({ error: "Already in library" });
         }
 
-        user.library.push(novelId);
+        user.library.push(novel._id);
         await user.save();
 
         res.json({ message: "Added to library" });
-    } catch {
+    } catch (err) {
+        console.error("ADD TO LIBRARY ERROR:", err);
         res.status(500).json({ error: "Server error" });
     }
 };
+
 
 exports.getLibrary = async (req, res) => {
     const userId = req.user.id;
@@ -217,6 +225,33 @@ exports.changePassword = async (req, res) => {
         res.json({ message: "Password changed successfully" });
     } catch {
         res.status(500).json({ error: "Password update failed" });
+    }
+};
+exports.getUserById = async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const user = await User.findById(userId)
+            .populate("library", "title coverImage coverTitle")
+            .populate("followers", "username profilePic")
+            .populate("following", "username profilePic");
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json({
+            _id: user._id,
+            username: user.username,
+            profilePic: user.profilePic,
+            bio: user.bio,
+            library: user.library,
+            followers: user.followers,
+            following: user.following
+        });
+    } catch (err) {
+        console.error("GET USER BY ID ERROR:", err);
+        res.status(500).json({ error: "Failed to get user profile" });
     }
 };
 
