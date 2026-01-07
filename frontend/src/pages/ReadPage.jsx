@@ -2,18 +2,25 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import API from "../utils/api";
 
+import PageShell from "../components/PageShell";
+import ReaderSkeleton from "../components/skeletons/ReaderSkeleton";
+
 const ReadPage = () => {
     const { chapterId } = useParams();
     const navigate = useNavigate();
 
     const [chapter, setChapter] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showSkeleton, setShowSkeleton] = useState(true);
     const [error, setError] = useState("");
 
     useEffect(() => {
         const fetchChapter = async () => {
             setLoading(true);
+            setShowSkeleton(true);
             setError("");
+
+            const start = Date.now();
 
             try {
                 const res = await API.get(`/chapters/read/${chapterId}`);
@@ -22,82 +29,85 @@ const ReadPage = () => {
                 setChapter(null);
                 setError(err.response?.data?.error || "Chapter not found");
             } finally {
-                setLoading(false);
-                window.scrollTo(0, 0);
+                const elapsed = Date.now() - start;
+                const MIN_DURATION = 300; // ms
+
+                const remaining = Math.max(0, MIN_DURATION - elapsed);
+
+                setTimeout(() => {
+                    setLoading(false);
+                    setShowSkeleton(false);
+                    window.scrollTo(0, 0);
+                }, remaining);
             }
         };
+
 
         fetchChapter();
     }, [chapterId]);
 
-    if (loading) {
-        return (
-            <div className="pt-24 text-center text-mutedGreen">
-                Loading chapter...
-            </div>
-        );
-    }
-
-    if (!chapter) {
-        return (
-            <div className="pt-24 text-center text-red-400">
-                {error}
-            </div>
-        );
-    }
-
     return (
-        <div className="pt-24 px-6 pb-16 text-white max-w-3xl mx-auto">
-            {/* Back to novel */}
-            <Link
-                to={`/novel/${chapter.novel}`}
-                className="text-blue-300 hover:underline text-lg font-semibold block mb-6"
-            >
-                ← Back to Novel
-            </Link>
+        <PageShell loading={showSkeleton} skeleton={<ReaderSkeleton />}>
 
-            {/* Chapter title */}
-            <h2 className="text-3xl font-semibold mb-8 text-center">
-                {chapter.title}
-            </h2>
+            {!chapter ? (
+                <div className="pt-24 text-center text-red-400">
+                    {error}
+                </div>
+            ) : (
+                <div className="pt-24 px-6 pb-16 text-white max-w-3xl mx-auto">
+                    {/* Back to novel */}
+                    <Link
+                        to={`/novel/${chapter.novel}`}
+                        className="text-blue-300 hover:underline text-lg font-semibold block mb-6"
+                    >
+                        ← Back to Novel
+                    </Link>
 
-            {/* Chapter content */}
-            <div className="whitespace-pre-line bg-white/5 p-6 rounded-lg leading-relaxed">
-                {chapter.content}
-            </div>
+                    {/* Chapter title */}
+                    <h2 className="text-3xl font-semibold mb-8 text-center">
+                        {chapter.title}
+                    </h2>
 
-            {/* Navigation */}
-            <div className="flex justify-between mt-10">
-                <button
-                    disabled={!chapter.hasPrev}
-                    onClick={() =>
-                        chapter.prevChapterId &&
-                        navigate(`/read/${chapter.prevChapterId}`)
-                    }
-                    className={`px-4 py-2 rounded transition ${chapter.hasPrev
-                        ? "bg-mutedGreen hover:bg-green-700"
-                        : "bg-gray-600 cursor-not-allowed"
-                        }`}
-                >
-                    ← Previous
-                </button>
+                    {/* Chapter content */}
+                    <div className="whitespace-pre-line bg-white/5 p-6 rounded-lg leading-relaxed">
+                        {chapter.content}
+                    </div>
 
-                <button
-                    disabled={!chapter.hasNext}
-                    onClick={() =>
-                        chapter.nextChapterId &&
-                        navigate(`/read/${chapter.nextChapterId}`)
-                    }
-                    className={`px-4 py-2 rounded transition ${chapter.hasNext
-                        ? "bg-mutedGreen hover:bg-green-700"
-                        : "bg-gray-600 cursor-not-allowed"
-                        }`}
-                >
-                    Next →
-                </button>
-            </div>
-        </div>
+                    {/* Navigation */}
+                    <div className="flex justify-between mt-10">
+                        <button
+                            disabled={!chapter.hasPrev}
+                            onClick={() =>
+                                chapter.prevChapterId &&
+                                navigate(`/read/${chapter.prevChapterId}`)
+                            }
+                            className={`px-4 py-2 rounded transition ${chapter.hasPrev
+                                    ? "bg-mutedGreen hover:bg-green-700"
+                                    : "bg-gray-600 cursor-not-allowed"
+                                }`}
+                        >
+                            ← Previous
+                        </button>
+
+                        <button
+                            disabled={!chapter.hasNext}
+                            onClick={() =>
+                                chapter.nextChapterId &&
+                                navigate(`/read/${chapter.nextChapterId}`)
+                            }
+                            className={`px-4 py-2 rounded transition ${chapter.hasNext
+                                    ? "bg-mutedGreen hover:bg-green-700"
+                                    : "bg-gray-600 cursor-not-allowed"
+                                }`}
+                        >
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            )}
+        </PageShell>
     );
 };
 
 export default ReadPage;
+

@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import API from "../utils/api";
 import BookCover from "../components/BookCover";
+import NovelRowSkeleton from "../components/skeletons/NovelRowSkeleton";
+import SidebarListSkeleton from "../components/skeletons/SidebarListSkeleton";
+
 
 const genres = [
     "Romance", "Fantasy", "Mystery", "Drama", "Horror",
@@ -90,15 +93,23 @@ const Homep = () => {
             </motion.div>
 
             {/* Novels Grid */}
-            {loading ? (
-                <p className="text-center text-gray-400">Loading novels...</p>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    {novels.map((novel) => (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                {loading
+                    ? Array.from({ length: 6 }).map((_, i) => (
+                        <NovelRowSkeleton key={i} />
+                    ))
+                    : novels.map((novel) => (
                         <Link
                             key={novel._id}
                             to={`/novel/${novel._id}`}
-                            className="flex gap-4 bg-white/5 p-4 rounded-lg hover:bg-white/10 transition"
+                            className="
+                              flex gap-4 bg-white/5 p-4 rounded-lg
+                              transition-all duration-200 ease-out
+                              hover:bg-white/10
+                              hover:-translate-y-[2px]
+                              hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)]
+                            "
+
                         >
                             <BookCover
                                 title={novel.title}
@@ -126,8 +137,8 @@ const Homep = () => {
                             </div>
                         </Link>
                     ))}
-                </div>
-            )}
+            </div>
+
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -156,24 +167,23 @@ const Homep = () => {
                         Popular Searches
                     </h4>
 
-                    <ul className="space-y-2">
-                        {popular.map((book) => (
-                            <li key={book._id}>
-                                <Link
-                                    to={`/novel/${book._id}`}
-                                    className="
-                                        text-mutedGreen
-                                        hover:text-green-400
-                                        hover:underline
-                                        transition
-                                        font-medium
-                                    "
-                                >
-                                    {book.title}
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
+                    {popular.length === 0 ? (
+                        <SidebarListSkeleton />
+                    ) : (
+                        <ul className="space-y-2">
+                            {popular.map((book) => (
+                                <li key={book._id}>
+                                    <Link
+                                        to={`/novel/${book._id}`}
+                                        className="text-mutedGreen hover:text-green-400 hover:underline transition font-medium"
+                                    >
+                                        {book.title}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
                 </div>
 
 
@@ -183,24 +193,23 @@ const Homep = () => {
                         Newly Added
                     </h4>
 
-                    <ul className="space-y-2">
-                        {newBooks.map((book) => (
-                            <li key={book._id}>
-                                <Link
-                                    to={`/novel/${book._id}`}
-                                    className="
-                                        text-mutedGreen
-                                        hover:text-green-400
-                                        hover:underline
-                                        transition
-                                        font-medium
-                                    "
-                                >
-                                    {book.title}
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
+                    {popular.length === 0 ? (
+                        <SidebarListSkeleton />
+                    ) : (
+                        <ul className="space-y-2">
+                            {popular.map((book) => (
+                                <li key={book._id}>
+                                    <Link
+                                        to={`/novel/${book._id}`}
+                                        className="text-mutedGreen hover:text-green-400 hover:underline transition font-medium"
+                                    >
+                                        {book.title}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
                 </div>
 
             </div>

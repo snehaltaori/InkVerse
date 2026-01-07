@@ -19,7 +19,14 @@
 
     if (coverImage) {
         return (
-            <img src={coverImage} alt={title} className={`${sizes[size]} object-cover rounded-md shadow`} />
+            <img
+                src={coverImage}
+                alt={title}
+                loading="lazy"
+                className="opacity-0 transition-opacity duration-300"
+                onLoad={(e) => e.currentTarget.classList.remove("opacity-0")}
+            />
+
         );
     }
 
